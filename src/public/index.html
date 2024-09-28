@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bot Console</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            height: 100vh;
+        }
+        #console {
+            width: 60%;
+            height: 90vh;
+            margin-right: 20px;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        #messages {
+            width: 100%;
+            height: 80%;
+            padding: 10px;
+            background-color: #1e1e1e;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            overflow-y: auto;
+            font-family: monospace;
+            color: #ffffff;
+        }
+        #messages p {
+            margin: 5px 0;
+            padding: 8px;
+            border-radius: 4px;
+            word-wrap: break-word;
+        }
+        form {
+            display: flex;
+            justify-content: center;
+            margin-top: 10px;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        button {
+            padding: 10px 20px;
+            margin-left: 10px;
+            border: none;
+            background-color: #007bff;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        #playerList {
+            width: 30%;
+            height: 90vh;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 10px;
+            overflow-y: auto;
+            background-color: #fff;
+        }
+
+        #searchPlayer {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+
+<div id="console">
+    <h1>Bot Console</h1>
+    <div id="messages"></div>
+
+    <form id="messageForm">
+        <input type="text" id="messageInput" placeholder="Type your message here" required>
+        <button type="submit">Send</button>
+    </form>
+</div>
+
+<div id="playerListSection">
+    <h1>Player List</h1>
+    <input type="text" id="searchPlayer" placeholder="Search player">
+    <ul id="playerList"></ul>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/ansi_up@5.0.0/ansi_up.min.js"></script>
+<script>
+    const socket = io();
+    const ansi_up = new AnsiUp();
+    let allPlayers = [];
+
+    socket.on('bot_message', function (data) {
+        const messagesDiv = document.getElementById('messages');
+        const coloredMessage = ansi_up.ansi_to_html(data.message);
+        messagesDiv.innerHTML += `<p>${coloredMessage}</p>`;
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    });
+
+    socket.on('update_players', function (players) {
+        allPlayers = Object.keys(players);
+        updatePlayerList(allPlayers);
+    });
+
+    function updatePlayerList(players) {
+        const playerList = document.getElementById('playerList');
+        playerList.innerHTML = '';
+        players.forEach(player => {
+            const li = document.createElement('li');
+            li.textContent = player;
+            playerList.appendChild(li);
+        });
+    }
+
+    const searchInput = document.getElementById('searchPlayer');
+    searchInput.addEventListener('input', function () {
+        const searchValue = searchInput.value.toLowerCase();
+        if (searchValue === "") {
+            updatePlayerList(allPlayers);
+        } else {
+            const filteredPlayers = allPlayers.filter(player => player.toLowerCase().includes(searchValue));
+            updatePlayerList(filteredPlayers);
+        }
+    });
+
+    const form = document.getElementById('messageForm');
+    form.addEventListener('submit', function (event) {
+        event.preventDefault();
+        const input = document.getElementById('messageInput');
+        const userMessage = input.value.trim();
+
+        if (userMessage !== "") {
+            socket.emit('user_message', { message: userMessage });
+            input.value = '';
+        }
+    });
+</script>
+
+</body>
+</html>
